@@ -9,6 +9,7 @@ classDiagram
         +add_pet(pet)
         +remove_pet(pet_id)
         +view_pets()
+        +get_all_tasks()
     }
 
     class Pet {
@@ -20,6 +21,7 @@ classDiagram
         +string diet_notes
         +string medication_notes
         +int owner_id
+        +list tasks
         +update_profile()
         +add_task(task)
         +view_tasks()
@@ -33,6 +35,7 @@ classDiagram
         +string priority
         +string status
         +int pet_id
+        +string frequency
         +mark_complete()
         +reschedule(new_time)
         +get_summary()
@@ -47,13 +50,17 @@ classDiagram
         +find_owner(owner_id)
         +find_pet(pet_id)
         +schedule_task(task)
+        +mark_task_complete(task_id)
+        +get_all_tasks()
         +get_tasks_for_day(date)
         +get_overdue_tasks()
         +sort_tasks_by_time()
+        +detect_conflicts()
+        +filter_tasks(status, pet_name)
     }
 
     Owner "1" --> "*" Pet : owns
     Pet "1" --> "*" Task : has
-    Scheduler --> Owner : manages
-    Scheduler --> Pet : tracks
-    Scheduler --> Task : organizes
+    Scheduler --> Owner : registers/manages
+    Scheduler --> Pet : finds/syncs
+    Scheduler --> Task : schedules/sorts/filters

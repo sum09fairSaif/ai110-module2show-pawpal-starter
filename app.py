@@ -7,9 +7,25 @@ from pawpal_system import Owner, Pet, Scheduler, Task
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 
+def build_task_rows(tasks: list[Task], scheduler: Scheduler) -> list[dict[str, str]]:
+    pet_lookup = {pet.pet_id: pet.name for pet in scheduler.pets}
+    return [
+        {
+            "Pet": pet_lookup.get(task.pet_id, f"Pet {task.pet_id}"),
+            "Title": task.title,
+            "Type": task.task_type,
+            "Due": task.due_time.strftime("%Y-%m-%d %H:%M"),
+            "Frequency": task.frequency,
+            "Priority": task.priority.title(),
+            "Status": task.status.title(),
+        }
+        for task in tasks
+    ]
+
+
 def initialize_state() -> None:
     if "owner" not in st.session_state:
-        st.session_state.owner = Owner(1, "Jordan", "jordan67@gmail.com", "555-0100")
+        st.session_state.owner = Owner(1, "Jordan", "jordan67@gmail.com", "123-555-0100")
 
     if "scheduler" not in st.session_state:
         st.session_state.scheduler = Scheduler()
@@ -28,7 +44,7 @@ owner: Owner = st.session_state.owner
 scheduler: Scheduler = st.session_state.scheduler
 
 st.title("🐾 PawPal+")
-st.caption("Manage pets and schedule care tasks with your Phase 2 classes.")
+st.caption("Manage pet care with smart scheduling, sorted timelines, and conflict alerts.")
 
 st.subheader("Owner")
 st.write(f"Logged in as: **{owner.name}**")
@@ -67,10 +83,17 @@ if add_pet_submitted:
 
 st.subheader("Current Pets")
 if owner.view_pets():
-    for pet in owner.view_pets():
-        st.markdown(
-            f"- **{pet.name}** ({pet.species}, {pet.breed}) | Age: {pet.age} | Pet ID: {pet.pet_id}"
-        )
+    pet_rows = [
+        {
+            "Pet": pet.name,
+            "Species": pet.species.title(),
+            "Breed": pet.breed,
+            "Age": str(pet.age),
+            "Pet ID": str(pet.pet_id),
+        }
+        for pet in owner.view_pets()
+    ]
+    st.table(pet_rows)
 else:
     st.info("No pets added yet.")
 
@@ -89,7 +112,11 @@ if pet_options:
         )
         due_date = st.date_input("Due date")
         due_clock = st.time_input("Due time", value=time(9, 0))
-        frequency = st.selectbox("Frequency", ["once", "daily", "weekly", "biweekly", "monthly", "yearly"], index=0)
+        frequency = st.selectbox(
+            "Frequency",
+            ["once", "daily", "weekly", "biweekly", "monthly", "yearly"],
+            index=0,
+        )
         priority = st.selectbox("Priority", ["low", "medium", "high", "critical"], index=1)
         schedule_task_submitted = st.form_submit_button("Schedule task")
 
@@ -117,17 +144,48 @@ else:
 
 st.divider()
 
-st.subheader("Today's Schedule")
-today_tasks = scheduler.get_tasks_for_day(datetime.now())
+st.subheader("Schedule Health")
+conflict_warnings = scheduler.detect_conflicts()
+if conflict_warnings:
+    st.warning("Two or more tasks share the same scheduled time. Review these items before the day gets busy.")
+    for warning in conflict_warnings:
+        st.warning(warning, icon="⚠️")
+else:
+    st.success("No exact-time conflicts found in the current schedule.", icon="✅")
 
-if today_tasks:
-    for task in scheduler.sort_tasks_by_time():
-        if task.due_time.date() == datetime.now().date():
-            st.markdown(
-                f"- **Pet ID:** {task.pet_id} | **Title:** {task.title} | "
-                f"**Due:** {task.due_time.strftime('%Y-%m-%d %H:%M')} | "
-                f"**Frequency:** {task.frequency} | **Priority:** {task.priority} | "
-                f"**Status:** {task.status}"
-            )
+st.divider()
+
+st.subheader("Today's Schedule")
+today = datetime.now()
+sorted_today_tasks = [
+    task for task in scheduler.sort_tasks_by_time() if task.due_time.date() == today.date()
+]
+
+if sorted_today_tasks:
+    st.table(build_task_rows(sorted_today_tasks, scheduler))
 else:
     st.info("No tasks scheduled for today.")
+
+st.divider()
+
+st.subheader("Task Explorer")
+pet_filter_options = ["All pets"] + [pet.name for pet in owner.view_pets()]
+selected_pet_filter = st.selectbox("Filter by pet", pet_filter_options)
+selected_status_filter = st.selectbox("Filter by status", ["All statuses", "pending", "complete"])
+
+if selected_status_filter != "All statuses":
+    filtered_tasks = scheduler.filter_tasks(
+        status=selected_status_filter,
+        pet_name=None if selected_pet_filter == "All pets" else selected_pet_filter,
+    )
+elif selected_pet_filter != "All pets":
+    filtered_tasks = scheduler.filter_tasks(pet_name=selected_pet_filter)
+else:
+    filtered_tasks = scheduler.get_all_tasks()
+
+filtered_tasks = sorted(filtered_tasks, key=lambda task: task.due_time)
+
+if filtered_tasks:
+    st.table(build_task_rows(filtered_tasks, scheduler))
+else:
+    st.info("No tasks match the selected filters.")
