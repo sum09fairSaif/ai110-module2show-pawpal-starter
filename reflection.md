@@ -124,13 +124,18 @@ classDiagram
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+- I used VS Code Copilot Chat as a design partner, code helper, and review assistant across different phases of the project. Early on, it was most helpful for brainstorming class responsibilities and checking whether my UML design had the right relationships between `Owner`, `Pet`, `Task`, and `Scheduler`. Later, I used it to help draft scheduler methods, think through recurring task behavior, and suggest test cases for sorting, filtering, and conflicts. Near the end, it was useful for polishing the Streamlit interface.
+- The most effective Chat features were code-aware prompts that referenced the current file or the broader codebase. Prompts such as "What edge cases should I test for sorting and recurring tasks?" and "Does my UML still match this final implementation?" were especially helpful because they pushed the AI to reason about relationships and behavior instead of only generating code. I also found test-generation style prompts useful because they exposed missing cases like one-time tasks that should not create a follow-up task.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+- One AI suggestion I chose not to accept as is was the idea of making the conflict detection logic much more advanced by tracking overlapping durations for every task. I decided that would make the system heavier than it needed to be for this phase. Instead, I kept the cleaner design where the scheduler groups tasks by exact `due_time` and warns the user about duplicate timestamps. That choice kept the system aligned with the project scope and easier to test.
+- I evaluated AI suggestions by checking whether they fit my class design, whether they made the code easier to explain, and whether I could verify the behavior with tests. I used `pytest` to confirm that sorting, recurring task creation, and conflict detection worked as expected. If a suggestion added complexity without improving the main user experience or testability, I either simplified it or rejected it.
+
+**c. Reflecting on AI strategy**
+
+- Using separate chat sessions for different phases helped me stay organized because each conversation had a clear job. One session focused on system design and UML, another focused on implementing the scheduler methods, another focused on testing, and another focused on the Streamlit UI and documentation. That separation reduced confusion, made it easier to track decisions, and kept me from mixing high-level design questions with small debugging details.
+- Working with Copilot taught me that I still needed to act as the lead architect. The AI was fast at generating ideas, examples, and code drafts, but it did not automatically know which tradeoffs were best for my project. I had to decide what belonged in each class, what features were worth implementing now, what was too complex for the assignment, and how to verify that the final system was reliable. The biggest lesson was that AI works best when I give it direction, review its output critically, and keep ownership of the design decisions.
 
 ---
 
@@ -138,13 +143,13 @@ classDiagram
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+- I tested the scheduler behaviors that mattered most to reliability: marking tasks complete, adding tasks to a pet, filtering tasks by status, filtering tasks by pet name, combining both filters, sorting tasks by due time, recurring task creation for daily, weekly, biweekly, monthly, and yearly schedules, and exact-time conflict detection for both the same pet and different pets.
+- These tests were important because they covered the parts of the system most likely to affect the user's daily planning experience. If sorting failed, the schedule would be confusing. If recurring logic failed, owners could miss routine care like feeding or medication. If conflict detection failed, the app could hide schedule problems instead of warning the user. Testing these behaviors gave me confidence that the app's core scheduling logic works as intended.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+- I feel confident in the scheduler's core reliability because the automated test suite passes and it covers the main scheduling features that I implemented. I would describe my confidence as about 4 out of 5 stars. The backend logic for sorting, filtering, recurring tasks, and conflict detection is in good shape, but I know there is still room for more integration and UI-level testing.
+- If I had more time, I would test additional edge cases such as scheduling a task for an unknown pet, duplicate owner or task IDs, empty schedules, pets with no tasks, filtering by a pet name that does not exist, and more complex recurrence cases. I would also add tests for the Streamlit interface to confirm that conflict warnings, filtered task tables, and sorted schedule views appear correctly for the user.
 
 ---
 
@@ -152,12 +157,12 @@ classDiagram
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+- I am most satisfied with how the project grew from a simple class design into a working system with meaningful scheduler behavior. The recurring task logic, sorting, filtering, and conflict detection made the project feel smarter than a basic task list, and I was also happy that I connected those backend features to the Streamlit UI so the user can actually see and use them.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+- If I had another iteration, I would improve the scheduler by adding task durations and smarter overlap detection instead of checking only exact duplicate times. I would also consider adding editing and deletion for tasks in the UI, clearer support for overdue tasks, and more detailed explanations for why the schedule is ordered the way it is. On the design side, I might also rethink whether some helper logic belongs in the `Scheduler` or should be separated into a dedicated planning service if the app keeps growing.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+- One important thing I learned is that good system design comes from making deliberate choices about responsibility and complexity. AI can generate code quickly, but it is still my job to decide what the system should optimize for, what tradeoffs are acceptable, and how to keep the design understandable. This project showed me that the best results come from treating AI as a strong collaborator while still staying responsible for the architecture, testing, and final decisions.
