@@ -115,8 +115,8 @@ classDiagram
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+- One tradeoff my scheduler makes is in conflict detection. It only checks whether two tasks have the exact same scheduled `due_time` instead of checking whether task durations overlap. This is a simpler algorithm because each task can be grouped by one timestamp and compared quickly, but it means the app may miss softer conflicts such as a 30-minute walk overlapping with a vet appointment that starts 15 minutes later.
+- I think this tradeoff is reasonable for this scenario because the project is still focused on core scheduling behavior, readability, and terminal or Streamlit output. A more advanced overlap algorithm would require storing task durations consistently and adding more complex comparison logic. For a small pet-owner scheduler, exact-time conflict warnings provide useful feedback without making the code much harder to understand.
 
 ---
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 
@@ -183,6 +183,45 @@ class Scheduler:
         pet.add_task(task)
         self._sync_tasks()
 
+    def mark_task_complete(self, task_id: int) -> Optional[Task]:
+        """Mark a task complete and optionally create the next recurring task.
+
+        When the completed task has a frequency of ``daily`` or ``weekly``,
+        this method creates a new pending task for the same pet using the next
+        available task id and a due date shifted with ``timedelta``.
+
+        Returns the new recurring task when one is created, otherwise ``None``.
+        """
+        task = self._find_task(task_id)
+        if task is None:
+            raise ValueError(f"Task with id {task_id} was not found.")
+
+        task.mark_complete()
+
+        if task.frequency not in {"daily", "weekly"}:
+            self._sync_tasks()
+            return None
+
+        offset_days = 1 if task.frequency == "daily" else 7
+        next_task = Task(
+            self._next_task_id(),
+            task.title,
+            task.task_type,
+            task.due_time + timedelta(days=offset_days),
+            task.priority,
+            "pending",
+            task.pet_id,
+            task.frequency,
+        )
+
+        pet = self.find_pet(task.pet_id)
+        if pet is None:
+            raise ValueError("Recurring task could not find its pet.")
+
+        pet.add_task(next_task)
+        self._sync_tasks()
+        return next_task
+
     def get_all_tasks(self) -> List[Task]:
         """Return every task across all registered owners and pets."""
         self._sync_tasks()
@@ -209,6 +248,59 @@ class Scheduler:
         """Return tasks sorted by due time."""
         return sorted(self.get_all_tasks(), key=lambda task: task.due_time)
 
+    def detect_conflicts(self) -> List[str]:
+        """Return warning messages for tasks scheduled at the exact same time.
+
+        This lightweight conflict check groups tasks by their ``due_time`` and
+        reports any timestamp that has more than one task. The warning message
+        also notes whether the overlap is for the same pet or for different
+        pets.
+        """
+        warnings: List[str] = []
+        tasks_by_time: dict[datetime, List[Task]] = {}
+
+        for task in self.get_all_tasks():
+            tasks_by_time.setdefault(task.due_time, []).append(task)
+
+        for due_time, tasks in tasks_by_time.items():
+            if len(tasks) < 2:
+                continue
+
+            pet_ids = {task.pet_id for task in tasks}
+            conflict_scope = "the same pet" if len(pet_ids) == 1 else "different pets"
+            warnings.append(
+                f"Warning: {len(tasks)} tasks are scheduled at {due_time.strftime('%Y-%m-%d %H:%M')} "
+                f"for {conflict_scope}."
+            )
+
+        return sorted(warnings)
+
+    def filter_tasks(
+        self,
+        status: Optional[str] = None,
+        pet_name: Optional[str] = None,
+    ) -> List[Task]:
+        """Return tasks filtered by completion status, pet name, or both.
+
+        The ``status`` filter matches the task status exactly. The
+        ``pet_name`` filter is case-insensitive and resolves matching pets
+        before returning their tasks.
+        """
+        tasks = self.get_all_tasks()
+
+        if status is not None:
+            tasks = [task for task in tasks if task.status == status]
+
+        if pet_name is not None:
+            matching_pet_ids = {
+                pet.pet_id
+                for pet in self.pets
+                if pet.name.lower() == pet_name.lower()
+            }
+            tasks = [task for task in tasks if task.pet_id in matching_pet_ids]
+
+        return tasks
+
     def _sync_tasks(self) -> None:
         """Rebuild the scheduler's task list from each owner's pets."""
         synced_tasks: List[Task] = []
@@ -221,3 +313,15 @@ class Scheduler:
 
         self.pets = synced_pets
         self.tasks = synced_tasks
+
+    def _find_task(self, task_id: int) -> Optional[Task]:
+        """Find and return a registered task by its id."""
+        for task in self.get_all_tasks():
+            if task.task_id == task_id:
+                return task
+        return None
+
+    def _next_task_id(self) -> int:
+        """Return the next available integer task id."""
+        existing_ids = [task.task_id for task in self.get_all_tasks()]
+        return (max(existing_ids) + 1) if existing_ids else 1
