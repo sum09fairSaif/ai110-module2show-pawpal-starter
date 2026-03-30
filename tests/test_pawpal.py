@@ -160,7 +160,7 @@ def test_filter_tasks_by_status_and_pet_name() -> None:
     assert filtered == [complete_task]
 
 
-def test_sort_tasks_by_time_returns_chronological_order() -> None:
+def test_sort_tasks_by_time_returns_priority_then_time_order() -> None:
     scheduler = Scheduler()
     owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
     scheduler.add_owner(owner)
@@ -180,7 +180,7 @@ def test_sort_tasks_by_time_returns_chronological_order() -> None:
         buddy.pet_id,
         "once",
     )
-    earliest_task = Task(
+    earlier_high_task = Task(
         2,
         "Breakfast",
         "feeding",
@@ -190,7 +190,7 @@ def test_sort_tasks_by_time_returns_chronological_order() -> None:
         fluffy.pet_id,
         "once",
     )
-    middle_task = Task(
+    later_high_task = Task(
         3,
         "Lunch meds",
         "medication",
@@ -200,14 +200,61 @@ def test_sort_tasks_by_time_returns_chronological_order() -> None:
         fluffy.pet_id,
         "once",
     )
+    critical_task = Task(
+        4,
+        "Emergency medication",
+        "medication",
+        datetime(2026, 3, 29, 20, 0),
+        "critical",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
 
     scheduler.schedule_task(later_task)
-    scheduler.schedule_task(earliest_task)
-    scheduler.schedule_task(middle_task)
+    scheduler.schedule_task(earlier_high_task)
+    scheduler.schedule_task(later_high_task)
+    scheduler.schedule_task(critical_task)
 
     sorted_tasks = scheduler.sort_tasks_by_time()
 
-    assert sorted_tasks == [earliest_task, middle_task, later_task]
+    assert sorted_tasks == [critical_task, earlier_high_task, later_high_task, later_task]
+
+
+def test_sort_tasks_by_time_can_sort_filtered_tasks() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    fluffy = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "", "", owner.owner_id)
+    scheduler.add_pet(fluffy)
+
+    low_task = Task(
+        1,
+        "Brush Fluffy",
+        "grooming",
+        datetime(2026, 3, 29, 8, 0),
+        "low",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+    high_task = Task(
+        2,
+        "Give medicine",
+        "medication",
+        datetime(2026, 3, 29, 10, 0),
+        "high",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+    scheduler.schedule_task(low_task)
+    scheduler.schedule_task(high_task)
+
+    filtered_pending_tasks = scheduler.filter_tasks(status="pending")
+
+    assert scheduler.sort_tasks_by_time(filtered_pending_tasks) == [high_task, low_task]
 
 
 def test_mark_task_complete_creates_next_daily_task() -> None:

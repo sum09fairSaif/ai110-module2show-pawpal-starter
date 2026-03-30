@@ -252,9 +252,22 @@ class Scheduler:
             if task.due_time < now and task.status != "complete"
         ]
 
-    def sort_tasks_by_time(self) -> List[Task]:
-        """Return tasks sorted by due time."""
-        return sorted(self.get_all_tasks(), key=lambda task: task.due_time)
+    def sort_tasks_by_time(self, tasks: Optional[List[Task]] = None) -> List[Task]:
+        """Return tasks sorted by priority first and due time second."""
+        tasks_to_sort = self.get_all_tasks() if tasks is None else list(tasks)
+        priority_order = {
+            "critical": 0,
+            "high": 1,
+            "medium": 2,
+            "low": 3,
+        }
+        return sorted(
+            tasks_to_sort,
+            key=lambda task: (
+                priority_order.get(task.priority.lower(), len(priority_order)),
+                task.due_time,
+            ),
+        )
 
     def detect_conflicts(self) -> List[str]:
         """Return warning messages for tasks scheduled at the exact same time.

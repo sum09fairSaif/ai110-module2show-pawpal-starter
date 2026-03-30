@@ -7,6 +7,16 @@ from pawpal_system import Owner, Pet, Scheduler, Task
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 
+def format_priority(priority: str) -> str:
+    priority_labels = {
+        "critical": "⚠️ Critical",
+        "high": "🔴 High",
+        "medium": "🟡 Medium",
+        "low": "🟢 Low",
+    }
+    return priority_labels.get(priority.lower(), priority.title())
+
+
 def build_task_rows(tasks: list[Task], scheduler: Scheduler) -> list[dict[str, str]]:
     pet_lookup = {pet.pet_id: pet.name for pet in scheduler.pets}
     return [
@@ -16,7 +26,7 @@ def build_task_rows(tasks: list[Task], scheduler: Scheduler) -> list[dict[str, s
             "Type": task.task_type,
             "Due": task.due_time.strftime("%Y-%m-%d %H:%M"),
             "Frequency": task.frequency,
-            "Priority": task.priority.title(),
+            "Priority": format_priority(task.priority),
             "Status": task.status.title(),
         }
         for task in tasks
@@ -183,7 +193,7 @@ elif selected_pet_filter != "All pets":
 else:
     filtered_tasks = scheduler.get_all_tasks()
 
-filtered_tasks = sorted(filtered_tasks, key=lambda task: task.due_time)
+filtered_tasks = scheduler.sort_tasks_by_time(filtered_tasks)
 
 if filtered_tasks:
     st.table(build_task_rows(filtered_tasks, scheduler))
