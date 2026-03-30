@@ -104,14 +104,19 @@ classDiagram
 - I also noticed that the `Owner` class was missing a way to update owner information, so I added an `update_profile()` method to make the owner class more consistent with the pet profile design.
 - I made these changes because they make the system easier to connect and maintain. The scheduler now has a cleaner way to manage relationships, and the owner class now supports profile updates the same way the pet class does.
 
+**c. Optional challenges completed**
+
+- I completed **Challenge 2: Data Persistence with Agent Mode** by adding JSON persistence so the app remembers pets and tasks between runs. I used Agent Mode to plan and implement `save_to_json()` and `load_from_json()` in the `Owner` class, and then updated the Streamlit startup flow so the app loads saved data from `data.json` automatically.
+- I also completed **Challenge 3: Advanced Priority Scheduling and UI** by extending the scheduler so tasks are ordered by priority first and time second. In the Streamlit interface, I added visual priority labels with emojis so urgent tasks are easier to spot, such as `⚠️` for critical, `🔴` for high, and `🟡` for medium.
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+- My scheduler considers two main constraints: priority and due time. Priority matters because some pet care tasks, like medication or urgent appointments, should appear before less important activities. Due time still matters because tasks within the same priority level should be completed in chronological order.
+- I decided these constraints mattered most because they directly support the owner's day-to-day decisions. A pet owner needs to know both what is most urgent and what is scheduled next. I kept the system focused on those two signals instead of adding too many advanced constraints at once.
 
 **b. Tradeoffs**
 
@@ -143,7 +148,7 @@ classDiagram
 
 **a. What you tested**
 
-- I tested the scheduler behaviors that mattered most to reliability: marking tasks complete, adding tasks to a pet, filtering tasks by status, filtering tasks by pet name, combining both filters, sorting tasks by due time, recurring task creation for daily, weekly, biweekly, monthly, and yearly schedules, and exact-time conflict detection for both the same pet and different pets.
+- I tested the scheduler behaviors that mattered most to reliability: marking tasks complete, adding tasks to a pet, filtering tasks by status, filtering tasks by pet name, combining both filters, sorting tasks by priority and then due time, recurring task creation for daily, weekly, biweekly, monthly, and yearly schedules, exact-time conflict detection for both the same pet and different pets, and JSON persistence for owner, pet, and task data.
 - These tests were important because they covered the parts of the system most likely to affect the user's daily planning experience. If sorting failed, the schedule would be confusing. If recurring logic failed, owners could miss routine care like feeding or medication. If conflict detection failed, the app could hide schedule problems instead of warning the user. Testing these behaviors gave me confidence that the app's core scheduling logic works as intended.
 
 **b. Confidence**
