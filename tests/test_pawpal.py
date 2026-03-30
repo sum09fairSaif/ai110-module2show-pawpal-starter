@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from pawpal_system import Owner, Pet, Scheduler, Task
 
@@ -546,3 +547,44 @@ def test_detect_conflicts_returns_empty_list_when_no_times_overlap() -> None:
     warnings = scheduler.detect_conflicts()
 
     assert warnings == []
+
+
+def test_owner_save_and_load_round_trip() -> None:
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    pet = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "High-quality cat food", "None", owner.owner_id)
+    task = Task(
+        1,
+        "Feed Fluffy",
+        "feeding",
+        datetime(2026, 3, 29, 8, 0),
+        "high",
+        "pending",
+        pet.pet_id,
+        "daily",
+    )
+    pet.add_task(task)
+    owner.add_pet(pet)
+
+    file_path = Path("test_owner_round_trip_data.json")
+    if file_path.exists():
+        file_path.unlink()
+
+    try:
+        owner.save_to_json(file_path)
+
+        loaded_owner = Owner.load_from_json(file_path)
+        scheduler = Scheduler()
+        scheduler.add_owner(loaded_owner)
+
+        assert loaded_owner.owner_id == owner.owner_id
+        assert loaded_owner.name == owner.name
+        assert loaded_owner.email == owner.email
+        assert loaded_owner.phone == owner.phone
+        assert loaded_owner.view_pets()[0].name == "Fluffy"
+        assert loaded_owner.view_pets()[0].view_tasks()[0].due_time == datetime(2026, 3, 29, 8, 0)
+        assert loaded_owner.view_pets()[0].view_tasks()[0].frequency == "daily"
+        assert scheduler.find_pet(12345678) is not None
+        assert scheduler.get_all_tasks()[0].title == "Feed Fluffy"
+    finally:
+        if file_path.exists():
+            file_path.unlink()

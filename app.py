@@ -1,8 +1,12 @@
+import json
 from datetime import datetime, time
+from pathlib import Path
 
 import streamlit as st
 
 from pawpal_system import Owner, Pet, Scheduler, Task
+
+DATA_FILE = Path("data.json")
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -33,19 +37,43 @@ def build_task_rows(tasks: list[Task], scheduler: Scheduler) -> list[dict[str, s
     ]
 
 
+def compute_next_pet_id(owner: Owner) -> int:
+    pet_ids = [pet.pet_id for pet in owner.view_pets()]
+    return (max(pet_ids) + 1) if pet_ids else 1000
+
+
+def compute_next_task_id(owner: Owner) -> int:
+    task_ids = [task.task_id for task in owner.get_all_tasks()]
+    return (max(task_ids) + 1) if task_ids else 1
+
+
+def load_owner_from_disk() -> Owner:
+    if DATA_FILE.exists():
+        try:
+            return Owner.load_from_json(DATA_FILE)
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            st.warning("Saved data could not be loaded, so PawPal+ started with a fresh owner profile.")
+
+    return Owner(1, "Jordan", "jordan67@gmail.com", "123-555-0100")
+
+
+def save_owner_to_disk(owner: Owner) -> None:
+    owner.save_to_json(DATA_FILE)
+
+
 def initialize_state() -> None:
     if "owner" not in st.session_state:
-        st.session_state.owner = Owner(1, "Jordan", "jordan67@gmail.com", "123-555-0100")
+        st.session_state.owner = load_owner_from_disk()
 
     if "scheduler" not in st.session_state:
         st.session_state.scheduler = Scheduler()
         st.session_state.scheduler.add_owner(st.session_state.owner)
 
     if "next_pet_id" not in st.session_state:
-        st.session_state.next_pet_id = 1000
+        st.session_state.next_pet_id = compute_next_pet_id(st.session_state.owner)
 
     if "next_task_id" not in st.session_state:
-        st.session_state.next_task_id = 1
+        st.session_state.next_task_id = compute_next_task_id(st.session_state.owner)
 
 
 initialize_state()
@@ -55,6 +83,8 @@ scheduler: Scheduler = st.session_state.scheduler
 
 st.title("🐾 PawPal+")
 st.caption("Manage pet care with smart scheduling, sorted timelines, and conflict alerts.")
+if DATA_FILE.exists():
+    st.caption("Loaded saved pets and tasks from `data.json`.")
 
 st.subheader("Owner")
 st.write(f"Logged in as: **{owner.name}**")
@@ -87,6 +117,7 @@ if add_pet_submitted:
         )
         scheduler.add_pet(new_pet)
         st.session_state.next_pet_id += 1
+        save_owner_to_disk(owner)
         st.success(f"{new_pet.name} was added successfully.")
     except ValueError as error:
         st.error(str(error))
@@ -146,6 +177,7 @@ if pet_options:
             )
             scheduler.schedule_task(new_task)
             st.session_state.next_task_id += 1
+            save_owner_to_disk(owner)
             st.success(f"Task scheduled for {selected_pet.name}.")
         except ValueError as error:
             st.error(str(error))

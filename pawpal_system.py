@@ -1,6 +1,8 @@
-from dataclasses import dataclass, field
 from calendar import monthrange
+import json
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List, Optional
 
 
@@ -136,6 +138,93 @@ class Owner:
         for pet in self.pets:
             all_tasks.extend(pet.view_tasks())
         return all_tasks
+
+    def save_to_json(self, file_path: str | Path = "data.json") -> None:
+        """Save this owner, pets, and tasks to a JSON file."""
+        path = Path(file_path)
+        path.write_text(json.dumps(self._to_dict(), indent=2), encoding="utf-8")
+
+    @classmethod
+    def load_from_json(cls, file_path: str | Path = "data.json") -> "Owner":
+        """Load an owner, pets, and tasks from a JSON file."""
+        path = Path(file_path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return cls._from_dict(data)
+
+    def _to_dict(self) -> dict[str, object]:
+        return {
+            "owner_id": self.owner_id,
+            "name": self.name,
+            "email": self.email,
+            "phone": self.phone,
+            "pets": [self._pet_to_dict(pet) for pet in self.pets],
+        }
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, object]) -> "Owner":
+        owner = cls(
+            int(data["owner_id"]),
+            str(data["name"]),
+            str(data["email"]),
+            str(data["phone"]),
+        )
+        owner.pets = [cls._pet_from_dict(pet_data) for pet_data in data.get("pets", [])]
+        return owner
+
+    @staticmethod
+    def _pet_to_dict(pet: Pet) -> dict[str, object]:
+        return {
+            "pet_id": pet.pet_id,
+            "name": pet.name,
+            "species": pet.species,
+            "breed": pet.breed,
+            "age": pet.age,
+            "diet_notes": pet.diet_notes,
+            "medication_notes": pet.medication_notes,
+            "owner_id": pet.owner_id,
+            "tasks": [Owner._task_to_dict(task) for task in pet.tasks],
+        }
+
+    @classmethod
+    def _pet_from_dict(cls, data: dict[str, object]) -> Pet:
+        pet = Pet(
+            int(data["pet_id"]),
+            str(data["name"]),
+            str(data["species"]),
+            str(data["breed"]),
+            int(data["age"]),
+            str(data["diet_notes"]),
+            str(data["medication_notes"]),
+            int(data["owner_id"]),
+        )
+        pet.tasks = [cls._task_from_dict(task_data) for task_data in data.get("tasks", [])]
+        return pet
+
+    @staticmethod
+    def _task_to_dict(task: Task) -> dict[str, object]:
+        return {
+            "task_id": task.task_id,
+            "title": task.title,
+            "task_type": task.task_type,
+            "due_time": task.due_time.isoformat(),
+            "priority": task.priority,
+            "status": task.status,
+            "pet_id": task.pet_id,
+            "frequency": task.frequency,
+        }
+
+    @staticmethod
+    def _task_from_dict(data: dict[str, object]) -> Task:
+        return Task(
+            int(data["task_id"]),
+            str(data["title"]),
+            str(data["task_type"]),
+            datetime.fromisoformat(str(data["due_time"])),
+            str(data["priority"]),
+            str(data["status"]),
+            int(data["pet_id"]),
+            str(data.get("frequency", "once")),
+        )
 
 
 class Scheduler:

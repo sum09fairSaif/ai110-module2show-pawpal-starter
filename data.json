@@ -1,0 +1,19 @@
+{
+  "owner_id": 1,
+  "name": "Jordan",
+  "email": "jordan67@gmail.com",
+  "phone": "123-555-0100",
+  "pets": [
+    {
+      "pet_id": 1000,
+      "name": "Mochi",
+      "species": "dog",
+      "breed": "Dalmatian",
+      "age": 7,
+      "diet_notes": "Processed Dog Food, Pork Belly, Steak, Bananas, Apples, Bones",
+      "medication_notes": "",
+      "owner_id": 1,
+      "tasks": []
+    }
+  ]
+}
