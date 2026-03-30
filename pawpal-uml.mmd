@@ -1,0 +1,54 @@
+classDiagram
+    class Owner {
+        +int owner_id
+        +string name
+        +string email
+        +string phone
+        +list pets
+        +add_pet(pet)
+        +remove_pet(pet_id)
+        +view_pets()
+    }
+
+    class Pet {
+        +int pet_id
+        +string name
+        +string species
+        +string breed
+        +int age
+        +string diet_notes
+        +string medication_notes
+        +int owner_id
+        +update_profile()
+        +add_task(task)
+        +view_tasks()
+    }
+
+    class Task {
+        +int task_id
+        +string title
+        +string task_type
+        +datetime due_time
+        +string priority
+        +string status
+        +int pet_id
+        +mark_complete()
+        +reschedule(new_time)
+        +get_summary()
+    }
+
+    class Scheduler {
+        +list tasks
+        +list pets
+        +list owners
+        +schedule_task(task)
+        +get_tasks_for_day(date)
+        +get_overdue_tasks()
+        +sort_tasks_by_time()
+    }
+
+    Owner "1" --> "*" Pet : owns
+    Pet "1" --> "*" Task : has
+    Scheduler --> Owner : manages
+    Scheduler --> Pet : tracks
+    Scheduler --> Task : organizes
