@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from calendar import monthrange
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -138,6 +139,12 @@ class Owner:
 
 
 class Scheduler:
+    # Core Behaviors To Verify
+    # 1. Task registration should only succeed when the pet already exists in the scheduler.
+    # 2. Task sorting should return tasks in ascending order by due time.
+    # 3. Task filtering should correctly narrow results by status, pet name, or both.
+    # 4. Completing recurring tasks should create the next daily, weekly, biweekly, monthly, or yearly occurrence.
+    # 5. Conflict detection should return warning messages when two or more tasks share the same due time.
     def __init__(self) -> None:
         self.tasks: List[Task] = []
         self.pets: List[Pet] = []
@@ -186,9 +193,10 @@ class Scheduler:
     def mark_task_complete(self, task_id: int) -> Optional[Task]:
         """Mark a task complete and optionally create the next recurring task.
 
-        When the completed task has a frequency of ``daily`` or ``weekly``,
-        this method creates a new pending task for the same pet using the next
-        available task id and a due date shifted with ``timedelta``.
+        When the completed task has a recurring frequency such as ``daily``,
+        ``weekly``, ``biweekly``, ``monthly``, or ``yearly``, this method
+        creates a new pending task for the same pet using the next available
+        task id and a calendar-aware next due date.
 
         Returns the new recurring task when one is created, otherwise ``None``.
         """
@@ -198,16 +206,16 @@ class Scheduler:
 
         task.mark_complete()
 
-        if task.frequency not in {"daily", "weekly"}:
+        next_due_time = self._get_next_due_time(task)
+        if next_due_time is None:
             self._sync_tasks()
             return None
 
-        offset_days = 1 if task.frequency == "daily" else 7
         next_task = Task(
             self._next_task_id(),
             task.title,
             task.task_type,
-            task.due_time + timedelta(days=offset_days),
+            next_due_time,
             task.priority,
             "pending",
             task.pet_id,
@@ -325,3 +333,33 @@ class Scheduler:
         """Return the next available integer task id."""
         existing_ids = [task.task_id for task in self.get_all_tasks()]
         return (max(existing_ids) + 1) if existing_ids else 1
+
+    def _get_next_due_time(self, task: Task) -> Optional[datetime]:
+        """Return the next due time for a recurring task, if supported."""
+        if task.frequency == "daily":
+            return task.due_time + timedelta(days=1)
+        if task.frequency == "weekly":
+            return task.due_time + timedelta(days=7)
+        if task.frequency == "biweekly":
+            return task.due_time + timedelta(days=14)
+        if task.frequency == "monthly":
+            return self._add_months(task.due_time, 1)
+        if task.frequency == "yearly":
+            return self._add_years(task.due_time, 1)
+        return None
+
+    def _add_months(self, due_time: datetime, months: int) -> datetime:
+        """Return a datetime shifted forward by whole calendar months."""
+        total_month = due_time.month - 1 + months
+        new_year = due_time.year + total_month // 12
+        new_month = total_month % 12 + 1
+        last_day = monthrange(new_year, new_month)[1]
+        new_day = min(due_time.day, last_day)
+        return due_time.replace(year=new_year, month=new_month, day=new_day)
+
+    def _add_years(self, due_time: datetime, years: int) -> datetime:
+        """Return a datetime shifted forward by whole calendar years."""
+        new_year = due_time.year + years
+        last_day = monthrange(new_year, due_time.month)[1]
+        new_day = min(due_time.day, last_day)
+        return due_time.replace(year=new_year, day=new_day)

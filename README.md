@@ -41,6 +41,18 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Testing PawPal+
+
+Run the automated test suite with:
+
+```bash
+python -m pytest
+```
+
+The tests cover the scheduler's most important behaviors, including task completion, pet task registration, filtering by status and pet name, chronological sorting, recurring task creation for supported frequencies, and exact-time conflict detection.
+
+Confidence Level: ★★★★☆. The current test results are strong because the full suite passes, but reliability is not yet perfect since the app still has room for more UI-level and integration-level testing.
+
 ### Suggested workflow
 
 1. Read the scenario carefully and identify requirements and edge cases.

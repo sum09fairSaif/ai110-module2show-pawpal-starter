@@ -160,6 +160,56 @@ def test_filter_tasks_by_status_and_pet_name() -> None:
     assert filtered == [complete_task]
 
 
+def test_sort_tasks_by_time_returns_chronological_order() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    fluffy = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "", "", owner.owner_id)
+    buddy = Pet(87654321, "Buddy", "Dog", "Golden Retriever", 5, "", "", owner.owner_id)
+    scheduler.add_pet(fluffy)
+    scheduler.add_pet(buddy)
+
+    later_task = Task(
+        1,
+        "Evening walk",
+        "walking",
+        datetime(2026, 3, 29, 18, 0),
+        "medium",
+        "pending",
+        buddy.pet_id,
+        "once",
+    )
+    earliest_task = Task(
+        2,
+        "Breakfast",
+        "feeding",
+        datetime(2026, 3, 29, 7, 0),
+        "high",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+    middle_task = Task(
+        3,
+        "Lunch meds",
+        "medication",
+        datetime(2026, 3, 29, 12, 0),
+        "high",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+
+    scheduler.schedule_task(later_task)
+    scheduler.schedule_task(earliest_task)
+    scheduler.schedule_task(middle_task)
+
+    sorted_tasks = scheduler.sort_tasks_by_time()
+
+    assert sorted_tasks == [earliest_task, middle_task, later_task]
+
+
 def test_mark_task_complete_creates_next_daily_task() -> None:
     scheduler = Scheduler()
     owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
@@ -190,6 +240,33 @@ def test_mark_task_complete_creates_next_daily_task() -> None:
     assert next_task.frequency == "daily"
 
 
+def test_mark_task_complete_for_once_task_does_not_create_recurring_task() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    fluffy = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "", "", owner.owner_id)
+    scheduler.add_pet(fluffy)
+
+    one_time_task = Task(
+        1,
+        "One-time grooming",
+        "grooming",
+        datetime(2026, 3, 29, 15, 0),
+        "low",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+    scheduler.schedule_task(one_time_task)
+
+    next_task = scheduler.mark_task_complete(one_time_task.task_id)
+
+    assert one_time_task.status == "complete"
+    assert next_task is None
+    assert scheduler.get_all_tasks() == [one_time_task]
+
+
 def test_mark_task_complete_creates_next_weekly_task() -> None:
     scheduler = Scheduler()
     owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
@@ -218,6 +295,96 @@ def test_mark_task_complete_creates_next_weekly_task() -> None:
     assert next_task.due_time == datetime(2026, 4, 5, 10, 0)
     assert next_task.status == "pending"
     assert next_task.frequency == "weekly"
+
+
+def test_mark_task_complete_creates_next_biweekly_task() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    buddy = Pet(87654321, "Buddy", "Dog", "Golden Retriever", 5, "", "", owner.owner_id)
+    scheduler.add_pet(buddy)
+
+    biweekly_task = Task(
+        1,
+        "Apply Buddy's flea treatment",
+        "medication",
+        datetime(2026, 3, 29, 10, 0),
+        "high",
+        "pending",
+        buddy.pet_id,
+        "biweekly",
+    )
+    scheduler.schedule_task(biweekly_task)
+
+    next_task = scheduler.mark_task_complete(biweekly_task.task_id)
+
+    assert biweekly_task.status == "complete"
+    assert next_task is not None
+    assert next_task.task_id == 2
+    assert next_task.due_time == datetime(2026, 4, 12, 10, 0)
+    assert next_task.status == "pending"
+    assert next_task.frequency == "biweekly"
+
+
+def test_mark_task_complete_creates_next_monthly_task() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    fluffy = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "", "", owner.owner_id)
+    scheduler.add_pet(fluffy)
+
+    monthly_task = Task(
+        1,
+        "Give Fluffy monthly treatment",
+        "medication",
+        datetime(2026, 1, 31, 8, 0),
+        "high",
+        "pending",
+        fluffy.pet_id,
+        "monthly",
+    )
+    scheduler.schedule_task(monthly_task)
+
+    next_task = scheduler.mark_task_complete(monthly_task.task_id)
+
+    assert monthly_task.status == "complete"
+    assert next_task is not None
+    assert next_task.task_id == 2
+    assert next_task.due_time == datetime(2026, 2, 28, 8, 0)
+    assert next_task.status == "pending"
+    assert next_task.frequency == "monthly"
+
+
+def test_mark_task_complete_creates_next_yearly_task() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    buddy = Pet(87654321, "Buddy", "Dog", "Golden Retriever", 5, "", "", owner.owner_id)
+    scheduler.add_pet(buddy)
+
+    yearly_task = Task(
+        1,
+        "Buddy annual vaccine",
+        "vet appointment",
+        datetime(2024, 2, 29, 9, 0),
+        "critical",
+        "pending",
+        buddy.pet_id,
+        "yearly",
+    )
+    scheduler.schedule_task(yearly_task)
+
+    next_task = scheduler.mark_task_complete(yearly_task.task_id)
+
+    assert yearly_task.status == "complete"
+    assert next_task is not None
+    assert next_task.task_id == 2
+    assert next_task.due_time == datetime(2025, 2, 28, 9, 0)
+    assert next_task.status == "pending"
+    assert next_task.frequency == "yearly"
 
 
 def test_detect_conflicts_for_same_pet_returns_warning() -> None:
@@ -294,3 +461,41 @@ def test_detect_conflicts_for_different_pets_returns_warning() -> None:
 
     assert len(warnings) == 1
     assert "different pets" in warnings[0]
+
+
+def test_detect_conflicts_returns_empty_list_when_no_times_overlap() -> None:
+    scheduler = Scheduler()
+    owner = Owner(96003110, "Alice", "alice@example.com", "217-555-1234")
+    scheduler.add_owner(owner)
+
+    fluffy = Pet(12345678, "Fluffy", "Cat", "Persian", 10, "", "", owner.owner_id)
+    buddy = Pet(87654321, "Buddy", "Dog", "Golden Retriever", 5, "", "", owner.owner_id)
+    scheduler.add_pet(fluffy)
+    scheduler.add_pet(buddy)
+
+    morning_task = Task(
+        1,
+        "Feed Fluffy",
+        "feeding",
+        datetime(2026, 3, 29, 8, 0),
+        "high",
+        "pending",
+        fluffy.pet_id,
+        "once",
+    )
+    evening_task = Task(
+        2,
+        "Walk Buddy",
+        "walking",
+        datetime(2026, 3, 29, 18, 0),
+        "medium",
+        "pending",
+        buddy.pet_id,
+        "once",
+    )
+    scheduler.schedule_task(morning_task)
+    scheduler.schedule_task(evening_task)
+
+    warnings = scheduler.detect_conflicts()
+
+    assert warnings == []
