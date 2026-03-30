@@ -10,18 +10,14 @@
 
 **a. Initial design**
 
-- My initial UML design used four main classes: `Owner`, `Pet`, `Task`, and `Scheduler`.
-- The `Owner` class is responsible for storing the pet owner's account and contact information, as well as keeping track of the pets they manage.
-- The `Pet` class represents each individual pet and stores details such as its name, type, age, dietary notes, medication reminders, and task history.
-- The `Task` class represents a care activity that needs to happen for a pet, such as feeding, walking, giving medicine, or attending a vet visit. It stores the due time, status, priority, and task type.
-- The `Scheduler` class coordinates all tasks. Its job is to add tasks, organize them by date and time, and generate the list of tasks due for a particular day.
+- My initial UML design used four main classes: `Owner`, `Pet`, `Task`, and `Scheduler`. I chose `Owner` to store the user's basic contact information and the pets that belong to them. I used `Pet` to represent each animal profile and hold information such as species, breed, age, food notes, and medication notes. I used `Task` to represent individual care actions like feeding, walking, medicine, or vet visits, along with details such as due time, priority, and completion status. Finally, I used `Scheduler` as the coordinating class that keeps track of owners, pets, and tasks so the app can organize daily care activities and show what needs to be done.
 
 ### Building Blocks
 
 #### `Owner`
 
 - Attributes: `owner_id`, `name`, `email`, `phone`, `pets`
-- Methods: `add_pet()`, `remove_pet()`, `view_pets()`
+- Methods: `update_profile()`, `add_pet()`, `remove_pet()`, `view_pets()`
 
 #### `Pet`
 
@@ -36,7 +32,7 @@
 #### `Scheduler`
 
 - Attributes: `tasks`, `pets`, `owners`
-- Methods: `schedule_task()`, `get_tasks_for_day()`, `get_overdue_tasks()`, `sort_tasks_by_time()`
+- Methods: `add_owner()`, `add_pet()`, `find_owner()`, `find_pet()`, `schedule_task()`, `get_tasks_for_day()`, `get_overdue_tasks()`, `sort_tasks_by_time()`
 
 ### Mermaid UML Draft
 
@@ -48,6 +44,7 @@ classDiagram
         +string email
         +string phone
         +list pets
+        +update_profile()
         +add_pet(pet)
         +remove_pet(pet_id)
         +view_pets()
@@ -84,6 +81,10 @@ classDiagram
         +list tasks
         +list pets
         +list owners
+        +add_owner(owner)
+        +add_pet(pet)
+        +find_owner(owner_id)
+        +find_pet(pet_id)
         +schedule_task(task)
         +get_tasks_for_day(date)
         +get_overdue_tasks()
@@ -99,8 +100,9 @@ classDiagram
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+- Yes. After reviewing the class skeleton, I noticed that the `Scheduler` stored lists of owners and pets but did not yet have clear methods for registering or looking them up. I added `add_owner()`, `add_pet()`, `find_owner()`, and `find_pet()` so the relationships between the classes are more explicit.
+- I also noticed that the `Owner` class was missing a way to update owner information, so I added an `update_profile()` method to make the owner class more consistent with the pet profile design.
+- I made these changes because they make the system easier to connect and maintain. The scheduler now has a cleaner way to manage relationships, and the owner class now supports profile updates the same way the pet class does.
 
 ---
 
